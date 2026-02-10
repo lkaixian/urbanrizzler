@@ -1,0 +1,17 @@
+# Security (NEVER COMMIT THIS)
+.env
+
+# Python Garbage
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Local Cache (Don't upload 100 json files)
+cache_data/
+
+# OS Junk
+.DS_Store

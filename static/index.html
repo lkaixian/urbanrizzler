@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VerbaBridge Debug Console</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --accent: #38bdf8;
+            --text: #f8fafc;
+            --success: #22c55e;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --border: #334155;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* --- CONTAINER --- */
+        .console-wrapper {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);
+        }
+
+        /* --- HEADER --- */
+        .header {
+            background: #020617;
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 { margin: 0; font-size: 1.5rem; background: linear-gradient(90deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .status-badge { font-size: 0.8rem; background: rgba(34, 197, 94, 0.1); color: var(--success); padding: 5px 10px; border-radius: 99px; border: 1px solid var(--success); }
+
+        /* --- MODE TABS --- */
+        .mode-tabs {
+            display: flex;
+            background: #0f172a;
+            padding: 10px 20px 0 20px;
+            gap: 5px;
+            border-bottom: 1px solid var(--border);
+        }
+        .mode-tab {
+            padding: 12px 20px;
+            background: transparent;
+            color: #64748b;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            transition: 0.2s;
+            border: 1px solid transparent;
+        }
+        .mode-tab:hover { color: white; background: #1e293b; }
+        .mode-tab.active {
+            background: var(--card);
+            color: var(--accent);
+            border: 1px solid var(--border);
+            border-bottom: 1px solid var(--card); /* Hide bottom border */
+            margin-bottom: -1px;
+        }
+
+        /* --- CONTROLS AREA --- */
+        .controls { padding: 30px; }
+        
+        /* Input Groups */
+        .input-section { display: none; } /* Hidden by default */
+        .input-section.active { display: block; animation: fadeIn 0.3s; }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 15px;
+            background: #0f172a;
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-family: 'Fira Code', monospace;
+        }
+        input[type="file"] { margin-bottom: 15px; }
+
+        .action-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent);
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .action-btn:hover { background: #7dd3fc; transform: translateY(-2px); }
+
+        /* --- LOGS / TERMINAL --- */
+        .terminal {
+            background: #020617;
+            border-top: 1px solid var(--border);
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            height: 200px;
+            overflow-y: auto;
+        }
+        .log-entry { margin-bottom: 5px; border-left: 2px solid transparent; padding-left: 10px; }
+        .log-info { color: #94a3b8; border-color: #94a3b8; }
+        .log-success { color: var(--success); border-color: var(--success); }
+        .log-warn { color: var(--warn); border-color: var(--warn); }
+        .log-error { color: var(--danger); border-color: var(--danger); }
+
+        /* --- RAW JSON VIEWER --- */
+        .json-viewer {
+            display: none; /* Toggleable */
+            background: #0f172a;
+            padding: 20px;
+            border-top: 1px solid var(--border);
+            white-space: pre-wrap;
+            font-family: 'Fira Code', monospace;
+            color: #a5b4fc;
+            font-size: 0.8rem;
+            overflow-x: auto;
+        }
+
+        /* --- TOGGLE SWITCH --- */
+        .debug-toggle {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #64748b;
+            cursor: pointer;
+        }
+        .toggle-checkbox { width: 16px; height: 16px; accent-color: var(--accent); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+    <div class="console-wrapper">
+        <div class="header">
+            <h1>VerbaBridge <span style="color:white; font-weight:300;">// DEBUGGER</span></h1>
+            <div class="status-badge">● API ONLINE</div>
+        </div>
+
+        <div class="mode-tabs">
+            <div class="mode-tab active" onclick="switchMode('translate')"><i class="fa-solid fa-language"></i> Translate</div>
+            <div class="mode-tab" onclick="switchMode('style')"><i class="fa-solid fa-wand-magic-sparkles"></i> Style Transfer</div>
+            <div class="mode-tab" onclick="switchMode('ocr')"><i class="fa-solid fa-camera"></i> OCR / Lens</div>
+        </div>
+
+        <div class="controls">
+            
+            <div id="sec-translate" class="input-section active">
+                <input type="text" id="inp-translate" placeholder="Enter text (e.g. 'Mata', '6 7', 'Payung')...">
+                <button class="action-btn" onclick="runTranslate()">Process Text</button>
+            </div>
+
+            <div id="sec-style" class="input-section">
+                <input type="text" id="inp-style-text" placeholder="Enter standard English sentence...">
+                <select id="inp-style-mode">
+                    <option value="Gen Alpha">Gen Alpha (Brainrot)</option>
+                    <option value="Ah Beng (Penang)">Ah Beng (Manglish/Hokkien)</option>
+                    <option value="Mak Cik (Gossip)">Mak Cik (Malay Gossip)</option>
+                    <option value="Corporate Wayang">Corporate Speak</option>
+                </select>
+                <button class="action-btn" onclick="runStyle()">Rewrite Vibe</button>
+            </div>
+
+            <div id="sec-ocr" class="input-section">
+                <div style="border: 2px dashed #334155; padding: 30px; text-align: center; border-radius: 12px; margin-bottom: 20px;">
+                    <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: #64748b; margin-bottom: 10px;"></i>
+                    <br>
+                    <input type="file" id="inp-file" accept="image/*" style="display:inline-block; margin-left:80px;">
+                </div>
+                <button class="action-btn" onclick="runOCR()">Scan Image</button>
+            </div>
+
+            <label class="debug-toggle">
+                <input type="checkbox" class="toggle-checkbox" id="jsonToggle" onchange="toggleJson()">
+                Show Raw JSON Response (For Debugging)
+            </label>
+
+        </div>
+
+        <div id="jsonOutput" class="json-viewer">Waiting for request...</div>
+
+        <div id="terminal" class="terminal">
+            <div class="log-entry log-info">> System Initialized. Ready.</div>
+        </div>
+    </div>
+
+    <script>
+        // --- UI LOGIC ---
+        function switchMode(mode) {
+            // Update Tabs
+            document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update Sections
+            document.querySelectorAll('.input-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(`sec-${mode}`).classList.add('active');
+            
+            log(`Switched to Mode: ${mode.toUpperCase()}`, 'info');
+        }
+
+        function toggleJson() {
+            const el = document.getElementById('jsonOutput');
+            el.style.display = document.getElementById('jsonToggle').checked ? 'block' : 'none';
+        }
+
+        function log(msg, type = 'info') {
+            const term = document.getElementById('terminal');
+            const div = document.createElement('div');
+            div.className = `log-entry log-${type}`;
+            div.innerHTML = `> ${msg}`;
+            term.appendChild(div);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        function displayJson(data) {
+            const el = document.getElementById('jsonOutput');
+            el.innerText = JSON.stringify(data, null, 2);
+            log("Received API Response.", "success");
+        }
+
+        // --- API CALLS ---
+
+        // 1. TRANSLATE
+        async function runTranslate() {
+            const text = document.getElementById('inp-translate').value;
+            if(!text) return log("Input cannot be empty!", "error");
+
+            log(`Sending Translate Request: "${text}"...`, "info");
+            try {
+                const res = await fetch('/process_text', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text})
+                });
+                const data = await res.json();
+                
+                if(data.status === 'success') {
+                    if(data.source === 'cache') log("⚡ CACHE HIT", "warn");
+                    if(data.is_ambiguous) log("⚠ Ambiguity Detected!", "warn");
+                    displayJson(data);
+                } else {
+                    log("Error: " + JSON.stringify(data), "error");
+                }
+            } catch(e) { log("Network Error: " + e, "error"); }
+        }
+
+        // 2. STYLE TRANSFER
+        async function runStyle() {
+    // 1. Get & Validate Input
+    const textInput = document.getElementById('inp-style-text');
+    const styleInput = document.getElementById('inp-style-mode');
+    
+    const text = textInput.value.trim();
+    const style = styleInput.value;
+
+    if(!text) {
+        return log("❌ Input cannot be empty!", "error");
+    }
+
+    log(`🧪 Applying Style [${style}] to "${text}"...`, "info");
+
+    try {
+        // 2. Fetch Data
+        const res = await fetch('/translate_style', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({text, style})
+        });
+
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+
+        const data = await res.json();
+        
+        // 3. Update Raw Debug View
+        displayJson(data);
+
+        // 4. RENDER THE "RIZZETA ANALYSIS" CARD
+        if(data.translated_text) {
+            const terminal = document.getElementById('terminal');
+            
+            const card = document.createElement('div');
+            // Inline styles for the Hackathon "Drop-in" factor
+            card.style.cssText = `
+                background: #1e293b; 
+                border-left: 4px solid #38bdf8; 
+                padding: 16px; 
+                margin: 12px 0; 
+                border-radius: 6px; 
+                font-family: 'Inter', sans-serif;
+                animation: fadeIn 0.3s ease-in-out;
+            `;
+            
+            card.innerHTML = `
+                <div style="color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-microscope" style="color: #38bdf8;"></i> 
+                    <span>Rizzeta Linguistic Analysis</span>
+                </div>
+
+                <div style="font-size: 1.1rem; color: white; margin-bottom: 12px; font-weight: 600; line-height: 1.4;">
+                    "${data.translated_text}"
+                </div>
+
+                <div style="background: rgba(56, 189, 248, 0.1); color: #7dd3fc; padding: 10px; font-size: 0.85rem; border-radius: 6px; border: 1px solid rgba(56, 189, 248, 0.2); font-family: 'Fira Code', monospace;">
+                    <i class="fa-solid fa-terminal" style="margin-right: 5px; opacity: 0.7;"></i>
+                    ${data.explanation || "Analysis complete."}
+                </div>
+            `;
+            
+            // Append and Scroll
+            terminal.appendChild(card);
+            terminal.scrollTop = terminal.scrollHeight;
+            
+            log("✅ Style Transfer Complete.", "success");
+        }
+
+    } catch(e) { 
+        log("❌ Network/API Error: " + e.message, "error"); 
+    }
+}
+
+        // 3. OCR
+        async function runOCR() {
+            const fileInput = document.getElementById('inp-file');
+            if(!fileInput.files[0]) return log("No file selected!", "error");
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+
+            log("Uploading Image for OCR Analysis...", "info");
+            try {
+                const res = await fetch('/process_image', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                displayJson(data);
+                log("OCR Analysis Complete.", "success");
+            } catch(e) { log("Upload Error: " + e, "error"); }
+        }
+    </script>
+</body>
+</html>
