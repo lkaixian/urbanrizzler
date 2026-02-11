@@ -1,20 +1,23 @@
 import os
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse
+import json
+from fastapi import FastAPI, File, UploadFile, Form
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 # --- MODULAR IMPORTS ---
 from core.cache import FileSystemCache
-from core.ai import generate_translations      # The Main Translation Logic
-from core.style import translate_style         # The "Vibe" Translator
-from core.ocr import process_image             # The "Lens" Feature
+from core.ai import generate_translations       # The Main Logic
+from core.style import translate_style          # The "Brainrot" Engine
+from core.ocr import process_image_remix       # The "Visual Remix" Engine
 from core.utils import get_hokkien_romanization # The Penang Patcher
 
-# --- APP SETUP ---
-app = FastAPI(title="VerbaBridge Modular", version="10.0")
+# --- SETUP ---
+load_dotenv()
+app = FastAPI(title="VerbaBridge Backend", version="2.0.0")
 cache = FileSystemCache()
 
-# --- DATA MODELS ---
+# --- DATA MODELS (Input Validation) ---
 class UserInput(BaseModel):
     text: str
 
@@ -31,69 +34,81 @@ async def home():
         with open("static/index.html", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return "<h1 style='color:red'>Error: static/index.html not found!</h1>"
+        return "<h1 style='color:red; font-family:sans-serif'>Error: static/index.html not found!</h1>"
 
-# 1. CORE TRANSLATION ENDPOINT (With Caching)
+# 1. CORE TRANSLATION (Text -> Culture)
 @app.post("/process_text")
 async def process_text(data: UserInput):
-    print(f"📩 Input: '{data.text}'")
+    print(f"📩 Processing Text: '{data.text}'")
 
-    # STEP 1: CHECK CACHE (Speed Layer)
+    # A. Check Cache (Speed Layer)
     cached_data = cache.get(data.text)
     if cached_data:
         print("⚡ CACHE HIT")
-        # Handle backward compatibility for older cache files
-        is_ambig = cached_data.get("is_ambiguous", len(cached_data.get("results", [])) > 1)
-        
         return {
             "status": "success", 
             "source": "cache", 
-            "is_ambiguous": is_ambig,
-            "results": cached_data["results"]
+            "is_ambiguous": cached_data.get("is_ambiguous", False),
+            "results": cached_data.get("results", [])
         }
 
-    # STEP 2: ASK AI (Compute Layer)
+    # B. Ask AI (Intelligence Layer)
     ai_data = generate_translations(data.text)
     
-    if not ai_data.get("results"):
+    if not ai_data or not ai_data.get("results"):
         return {"status": "error", "message": "AI generation failed"}
 
-    # STEP 3: APPLY HOKKIEN PATCH (Logic Layer)
-    # We fix the spelling BEFORE saving to cache, so we don't have to fix it again later.
-    final_results = ai_data["results"]
-    for res in final_results:
+    # C. Apply Penang Hokkien Patch (Logic Layer)
+    # This fixes the romanization using your 'Taibun' utility
+    for res in ai_data["results"]:
         try:
-            hanzi = res["translations"]["hokkien"]["hanzi"]
-            res["translations"]["hokkien"]["romanization"] = get_hokkien_romanization(hanzi)
+            raw_hanzi = res["translations"]["hokkien"]["hanzi"]
+            # Convert Hanzi -> Penang Romanization
+            res["translations"]["hokkien"]["romanization"] = get_hokkien_romanization(raw_hanzi)
         except KeyError:
             pass 
 
-    # STEP 4: SAVE TO CACHE (Persistence Layer)
-    # We save the entire object including the 'is_ambiguous' flag
+    # D. Save to Cache (Persistence Layer)
     cache.set(data.text, ai_data) 
 
     return {
         "status": "success", 
         "source": "gemini", 
-        "is_ambiguous": ai_data["is_ambiguous"],
-        "results": final_results
+        "is_ambiguous": ai_data.get("is_ambiguous", False),
+        "results": ai_data["results"]
     }
 
-# 2. STYLE TRANSFER ENDPOINT (New Feature)
+# 2. STYLE TRANSFER (Text -> Slang)
 @app.post("/translate_style")
 async def api_translate_style(data: StyleInput):
     """
-    Converts text into Gen Alpha, Ah Beng, or Corporate slang.
-    Note: We generally DON'T cache this because style transfer is highly variable,
-    but you could add cache here if you wanted.
+    Converts standard text into a specific persona (Gen Alpha, Ah Beng, etc.)
     """
+    print(f"🎭 Applying Style [{data.style}] to: '{data.text}'")
     return translate_style(data.text, data.style)
 
-# 3. OCR / LENS ENDPOINT (New Feature)
+# 3. VISUAL REMIX (Image -> Translated Overlay)
 @app.post("/process_image")
-async def api_process_image(file: UploadFile = File(...)):
+async def api_process_image(
+    file: UploadFile = File(...), 
+    style: str = Form("Gen Alpha") # Default style if not provided
+):
     """
-    Reads a menu or signboard and translates it.
+    Takes an image, translates the text inside it, and overlays the translation.
     """
-    image_bytes = await file.read()
-    return process_image(image_bytes)
+    try:
+        # Read the uploaded file bytes
+        image_bytes = await file.read()
+        
+        # Send to core/ocr.py for processing
+        # This function handles Gemini Analysis + Pillow Drawing
+        result = await process_image_remix(image_bytes, target_style=style)
+        
+        if "error" in result:
+             return JSONResponse(result, status_code=500)
+
+        return result
+
+    except Exception as e:
+        print(f"❌ Server Error: {e}")
+        return JSONResponse({"error": str(e)}, status_code=500)
