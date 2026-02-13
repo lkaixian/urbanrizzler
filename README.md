@@ -17,4 +17,8 @@ The backend API for **VerbaBridge**, featuring the **Rizzeta Stone Protocol** fo
 ## 📚 API Endpoints
 * `POST /process_text` - Translate Slang <-> Standard English.
 * `POST /translate_style` - Apply Gen Alpha / Brainrot Style.
+<<<<<<< HEAD
 * `POST /process_image` - OCR Lens feature.
+=======
+* `POST /process_image` - OCR Lens feature.
+>>>>>>> f0ddd698034fead3f11499d1d5b57e3bd5ca7269
