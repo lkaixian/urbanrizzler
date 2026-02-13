@@ -76,7 +76,7 @@ class FileSystemCache:
         except Exception as e:
             print(f"⚠ Cache Write Error: {e}")
 
-    # --- SINGLE FILE MODE HELPERS (New Logic) ---
+    # --- SINGLE FILE MODE HELPERS ---
 
     def _load_single_file(self):
         if os.path.exists(self.cache_file):

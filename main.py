@@ -87,7 +87,7 @@ async def api_translate_style(data: StyleInput):
     print(f"🎭 Applying Style [{data.style}] to: '{data.text}'")
     return translate_style(data.text, data.style)
 
-# 3. VISUAL REMIX (Image -> Translated Overlay)
+# 3. VISUAL REMIX (Image -> Translated Overlay) 
 @app.post("/process_image")
 async def api_process_image(
     file: UploadFile = File(...), 

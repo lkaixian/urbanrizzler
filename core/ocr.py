@@ -11,7 +11,7 @@ from google.genai import types
 from core.client import client
 from fastapi.concurrency import run_in_threadpool
 
-# --- OCR PROMPT (UNCHANGED) ---
+# --- OCR PROMPT ---
 def GET_OCR_REMIX_PROMPT(target_style):
     return f"""
   You are the VerbaBridge **Optical Linguist**.

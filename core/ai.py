@@ -14,7 +14,7 @@ if not API_KEY:
 
 client = genai.Client(api_key=API_KEY)
 
-# --- MAIN TRANSLATION PROMPT (ULTIMATE EDITION + GEN Z) ---
+# --- MAIN TRANSLATION PROMPT ---
 ONE_SHOT_PROMPT = """
 You are the VerbaBridge Omni-Translator.
 Your personality is a mix of an **Oxford Dictionary** (for literal meanings), **Urban Dictionary** (for slang), and **Meme Historian** (for brainrot).
@@ -108,7 +108,7 @@ OUTPUT STRICT JSON:
 """ 
 
 def generate_translations(text):
-    print(f"🧠 Asking Gemini (Hybrid Mode): '{text}'")
+    print(f"🧠 Asking Gemini: '{text}'")
     try:
         response = client.models.generate_content(
             model="gemini-3-flash-preview",

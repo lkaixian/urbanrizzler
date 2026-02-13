@@ -2,7 +2,7 @@ import json
 from google.genai import types
 from core.client import client  # Import shared client
 
-# --- STYLE TRANSFER PROMPT (RIZZETA SEMANTIC EDITION) ---
+# --- STYLE TRANSFER PROMPT (RIZZETA SEMANTIC) ---
 STYLE_PROMPT = """
 You are a "Cultural Method Actor" and **Linguistic Anthropologist**.
 Your goal is to **rewrite** the input text by mapping its **underlying semantics** to the target Persona/Style.

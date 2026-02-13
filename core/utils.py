@@ -4,7 +4,7 @@ from taibun import Converter
 
 # --- CONFIGURATION ---
 # We use 'Tailo' as the base because it preserves tone marks accurately,
-# which allows us to convert them to Penang style numbers later.
+# which allows us to convert them to Penang style numbers later. 
 try:
     t_converter = Converter(system='Tailo', dialect='south')
 except ImportError:
